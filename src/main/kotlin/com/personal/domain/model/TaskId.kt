@@ -10,7 +10,7 @@ data class TaskId private constructor(
         fun generate(): TaskId = TaskId(UUID.randomUUID())
 
         fun fromString(uuidString: String): TaskId {
-            require(uuidString.isNotBlank()) { "UUID string must not be blank" }
+            check(uuidString.isNotBlank()) { "UUID string must not be blank" }
             return try {
                 TaskId(UUID.fromString(uuidString))
             } catch (_: IllegalArgumentException) {
