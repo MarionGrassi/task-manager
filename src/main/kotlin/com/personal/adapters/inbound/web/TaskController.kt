@@ -6,11 +6,13 @@ import com.personal.adapters.inbound.web.dto.CreateTaskRequestDto
 import com.personal.adapters.inbound.web.dto.MultipleTasksResponseDto
 import com.personal.adapters.inbound.web.dto.TaskResponseDto
 import com.personal.adapters.inbound.web.dto.TasksCatalogueDto
+import com.personal.adapters.inbound.web.dto.UpdateTaskStatusRequestDto
 import com.personal.adapters.inbound.web.errormanager.ApplicationException
 import com.personal.usecase.ports.inbound.CreateMultipleTasksUseCase
 import com.personal.usecase.ports.inbound.CreateTaskUseCase
 import com.personal.usecase.ports.inbound.GetTaskByIdUseCase
 import com.personal.usecase.ports.inbound.GetTasksUseCase
+import com.personal.usecase.ports.inbound.UpdateTaskStatusUseCase
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -28,6 +30,7 @@ class TaskController(
     private val createMultipleTasksUseCase: CreateMultipleTasksUseCase,
     private val getTaskByIdUseCase: GetTaskByIdUseCase,
     private val getTasksUseCase: GetTasksUseCase,
+    private val updateTaskStatusUseCase: UpdateTaskStatusUseCase,
 ) {
     @Operation(
         summary = "Create a new task",
@@ -137,6 +140,35 @@ class TaskController(
             .fold(
                 { tasksPageResponse ->
                     TasksCatalogueDto.fromResponse(tasksPageResponse)
+                },
+                { error ->
+                    throw ApplicationException(error)
+                },
+            )
+
+    @Operation(
+        summary = "Update task status",
+        description = "Updates the completion status of a task by its unique identifier.",
+        responses = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Task status updated successfully",
+                content = [Content(schema = Schema(implementation = TaskResponseDto::class))],
+            ),
+            ApiResponse(responseCode = "404", description = "Task not found"),
+            ApiResponse(responseCode = "401", description = "You are not authenticated"),
+        ],
+    )
+    @PatchMapping("/{id}/status")
+    fun updateTaskStatus(
+        @PathVariable id: UUID,
+        @RequestBody request: UpdateTaskStatusRequestDto,
+    ): TaskResponseDto =
+        updateTaskStatusUseCase
+            .execute(request.toCommand(id))
+            .fold(
+                { taskResponse ->
+                    TaskResponseDto.fromTaskResponse(taskResponse)
                 },
                 { error ->
                     throw ApplicationException(error)

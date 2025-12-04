@@ -13,6 +13,8 @@ class Task private constructor(
     val description: String,
     val completed: Boolean,
 ) {
+    fun updateStatus(completed: Boolean): Task = Task(taskId, label, description, completed)
+
     companion object {
         fun create(
             taskId: TaskId = TaskId.generate(),

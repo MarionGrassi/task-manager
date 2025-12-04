@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
@@ -237,6 +238,78 @@ class TaskIT : IntegrationTestBase() {
                 ).andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isBadRequest)
                 .andExpect(jsonPath("$.code").value("PAGE_SIZE_TOO_LARGE"))
+        }
+    }
+
+    @Nested
+    @DisplayName("Update Task Status")
+    inner class UpdateTaskStatus {
+        @Test
+        @DisplayName("Successfully updates task status to completed")
+        fun `updates task status to completed`() {
+            val taskId = createTask("Task to complete", "This will be marked as done", false)
+
+            val requestBody =
+                """
+                    {
+                      "completed": true
+                    }
+                """.trimIndent()
+
+            mockMvc
+                .perform(
+                    patch("$BASE_TASK_URL/{id}/status", taskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(taskId.toString()))
+                .andExpect(jsonPath("$.completed").value(true))
+        }
+
+        @Test
+        @DisplayName("Successfully updates task status to incomplete")
+        fun `updates task status to incomplete`() {
+            val taskId = createTask("Completed task", "This will be marked as incomplete", true)
+
+            val requestBody =
+                """
+                    {
+                      "completed": false
+                    }
+                """.trimIndent()
+
+            mockMvc
+                .perform(
+                    patch("$BASE_TASK_URL/{id}/status", taskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.id").value(taskId.toString()))
+                .andExpect(jsonPath("$.completed").value(false))
+        }
+
+        @Test
+        @DisplayName("Returns 404 when updating non-existent task")
+        fun `returns 404 for non-existent task`() {
+            val nonExistentId = UUID.randomUUID()
+
+            val requestBody =
+                """
+                    {
+                      "completed": true
+                    }
+                """.trimIndent()
+
+            mockMvc
+                .perform(
+                    patch("$BASE_TASK_URL/{id}/status", nonExistentId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isNotFound)
         }
     }
 
