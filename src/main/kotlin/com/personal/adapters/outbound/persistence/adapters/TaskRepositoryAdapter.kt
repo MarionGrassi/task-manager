@@ -15,4 +15,10 @@ class TaskRepositoryAdapter(
         val savedEntity = mongoTemplate.save(entity)
         return savedEntity.toDomain()
     }
+
+    override fun saveAll(tasks: List<Task>): List<Task> {
+        val entities = tasks.map { TaskEntity.fromDomain(it) }
+        val savedEntities = mongoTemplate.insertAll(entities)
+        return savedEntities.map { it.toDomain() }
+    }
 }

@@ -2,6 +2,8 @@ package com.personal.usecase.ports.outbound
 
 import com.personal.domain.model.Task
 
-fun interface TaskRepositoryPort {
+interface TaskRepositoryPort {
     fun save(task: Task): Task
+
+    fun saveAll(tasks: List<Task>): List<Task>
 }

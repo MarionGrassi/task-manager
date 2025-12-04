@@ -1,9 +1,12 @@
 package com.personal.adapters.inbound.web
 
 import com.github.michaelbull.result.fold
+import com.personal.adapters.inbound.web.dto.CreateMultipleTasksRequestDto
 import com.personal.adapters.inbound.web.dto.CreateTaskRequestDto
+import com.personal.adapters.inbound.web.dto.MultipleTasksResponseDto
 import com.personal.adapters.inbound.web.dto.TaskResponseDto
 import com.personal.adapters.inbound.web.errormanager.ApplicationException
+import com.personal.usecase.ports.inbound.CreateMultipleTasksUseCase
 import com.personal.usecase.ports.inbound.CreateTaskUseCase
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/tasks")
 class TaskController(
     private val createTaskUseCase: CreateTaskUseCase,
+    private val createMultipleTasksUseCase: CreateMultipleTasksUseCase,
 ) {
     @Operation(
         summary = "Create a new task",
@@ -42,6 +46,35 @@ class TaskController(
             .fold(
                 { taskResponse ->
                     TaskResponseDto.fromTaskResponse(taskResponse)
+                },
+                { error ->
+                    throw ApplicationException(error)
+                },
+            )
+
+    @Operation(
+        summary = "Create multiple tasks",
+        description = "Creates multiple tasks at once with the provided list of task details.",
+        responses = [
+            ApiResponse(
+                responseCode = "201",
+                description = "Tasks created successfully",
+                content = [Content(schema = Schema(implementation = MultipleTasksResponseDto::class))],
+            ),
+            ApiResponse(responseCode = "400", description = "Invalid request body"),
+            ApiResponse(responseCode = "401", description = "You are not authenticated"),
+        ],
+    )
+    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping("/bulk")
+    fun createMultipleTasks(
+        @RequestBody request: CreateMultipleTasksRequestDto,
+    ): MultipleTasksResponseDto =
+        createMultipleTasksUseCase
+            .execute(request.toCommand())
+            .fold(
+                { multipleTasksResponse ->
+                    MultipleTasksResponseDto.fromMultipleTasksResponse(multipleTasksResponse)
                 },
                 { error ->
                     throw ApplicationException(error)
