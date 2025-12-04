@@ -23,6 +23,9 @@ class ApplicationErrorHandler {
             when (error) {
                 is UseCaseError.DomainValidation -> HttpStatus.BAD_REQUEST
                 is UseCaseError.TaskNotFound -> HttpStatus.NOT_FOUND
+                is UseCaseError.PageNumberNegative -> HttpStatus.BAD_REQUEST
+                is UseCaseError.PageSizeNegative -> HttpStatus.BAD_REQUEST
+                is UseCaseError.PageSizeTooLarge -> HttpStatus.BAD_REQUEST
             }
 
         return ResponseEntity

@@ -3,7 +3,9 @@ package com.personal.adapters.outbound.persistence.adapters
 import com.personal.adapters.outbound.persistence.entities.TaskEntity
 import com.personal.domain.model.Task
 import com.personal.domain.model.TaskId
+import com.personal.domain.model.TasksPage
 import com.personal.usecase.ports.outbound.TaskRepositoryPort
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
@@ -28,5 +30,21 @@ class TaskRepositoryAdapter(
     override fun findById(taskId: TaskId): Task? {
         val query = Query(Criteria.where("taskId").`is`(taskId.uuid.toString()))
         return mongoTemplate.findOne(query, TaskEntity::class.java)?.toDomain()
+    }
+
+    override fun findAll(
+        page: Int,
+        size: Int,
+    ): TasksPage {
+        val query = Query().with(PageRequest.of(page, size))
+        val tasks = mongoTemplate.find(query, TaskEntity::class.java)
+        val totalElements = mongoTemplate.count(Query(), TaskEntity::class.java)
+
+        return TasksPage.rehydrate(
+            tasks = tasks.map { it.toDomain() },
+            page = page,
+            size = size,
+            totalCount = totalElements,
+        )
     }
 }

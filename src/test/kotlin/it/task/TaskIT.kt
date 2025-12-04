@@ -5,6 +5,7 @@ import com.personal.adapters.inbound.web.dto.TaskResponseDto
 import it.IntegrationTestBase
 import org.hamcrest.Matchers.hasSize
 import org.hamcrest.Matchers.notNullValue
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -13,12 +14,17 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
-import java.util.UUID
+import java.util.*
 
 @DisplayName("Task API Integration Tests")
 class TaskIT : IntegrationTestBase() {
     companion object {
         const val BASE_TASK_URL = "/tasks"
+    }
+
+    @AfterEach
+    fun tearDown() {
+        mongoTemplate.db.drop()
     }
 
     @Nested
@@ -149,6 +155,88 @@ class TaskIT : IntegrationTestBase() {
                         .accept(MediaType.APPLICATION_JSON),
                 ).andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isNotFound)
+        }
+    }
+
+    @Nested
+    @DisplayName("Get All Tasks")
+    inner class GetAllTasks {
+        @Test
+        @DisplayName("Successfully retrieves paginated tasks")
+        fun `retrieves paginated tasks successfully`() {
+            // Create some tasks first
+            createTask("Task A", "Description A", false)
+            createTask("Task B", "Description B", true)
+            createTask("Task C", "Description C", false)
+
+            mockMvc
+                .perform(
+                    get(BASE_TASK_URL)
+                        .accept(MediaType.APPLICATION_JSON),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.tasks", notNullValue()))
+                .andExpect(jsonPath("$.pagination", notNullValue()))
+                .andExpect(jsonPath("$.pagination.page").value(0))
+                .andExpect(jsonPath("$.pagination.size").value(10))
+                .andExpect(jsonPath("$.pagination.totalCount").value(3))
+        }
+
+        @Test
+        @DisplayName("Retrieves tasks with custom pagination")
+        fun `retrieves tasks with custom page size`() {
+            mockMvc
+                .perform(
+                    get(BASE_TASK_URL)
+                        .param("page", "0")
+                        .param("size", "5")
+                        .accept(MediaType.APPLICATION_JSON),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.pagination.size").value(5))
+        }
+
+        @Test
+        @DisplayName("Retrieves tasks with negative page")
+        fun `retrieves tasks with negative page`() {
+            mockMvc
+                .perform(
+                    get(BASE_TASK_URL)
+                        .param("page", "-1")
+                        .param("size", "5")
+                        .accept(MediaType.APPLICATION_JSON),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("PAGE_NUMBER_NEGATIVE"))
+        }
+
+        @Test
+        @DisplayName("Retrieves tasks with negative size")
+        fun `retrieves tasks with negative size`() {
+            mockMvc
+                .perform(
+                    get(BASE_TASK_URL)
+                        .param("page", "0")
+                        .param("size", "-5")
+                        .accept(MediaType.APPLICATION_JSON),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("PAGE_SIZE_NEGATIVE"))
+        }
+
+        @Test
+        @DisplayName("Retrieves tasks with too large size")
+        fun `retrieves tasks with too large size`() {
+            mockMvc
+                .perform(
+                    get(BASE_TASK_URL)
+                        .param("page", "0")
+                        .param("size", "102")
+                        .accept(MediaType.APPLICATION_JSON),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("PAGE_SIZE_TOO_LARGE"))
         }
     }
 

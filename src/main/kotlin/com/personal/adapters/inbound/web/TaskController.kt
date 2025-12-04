@@ -5,10 +5,12 @@ import com.personal.adapters.inbound.web.dto.CreateMultipleTasksRequestDto
 import com.personal.adapters.inbound.web.dto.CreateTaskRequestDto
 import com.personal.adapters.inbound.web.dto.MultipleTasksResponseDto
 import com.personal.adapters.inbound.web.dto.TaskResponseDto
+import com.personal.adapters.inbound.web.dto.TasksCatalogueDto
 import com.personal.adapters.inbound.web.errormanager.ApplicationException
 import com.personal.usecase.ports.inbound.CreateMultipleTasksUseCase
 import com.personal.usecase.ports.inbound.CreateTaskUseCase
 import com.personal.usecase.ports.inbound.GetTaskByIdUseCase
+import com.personal.usecase.ports.inbound.GetTasksUseCase
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -25,6 +27,7 @@ class TaskController(
     private val createTaskUseCase: CreateTaskUseCase,
     private val createMultipleTasksUseCase: CreateMultipleTasksUseCase,
     private val getTaskByIdUseCase: GetTaskByIdUseCase,
+    private val getTasksUseCase: GetTasksUseCase,
 ) {
     @Operation(
         summary = "Create a new task",
@@ -106,6 +109,34 @@ class TaskController(
             .fold(
                 { taskResponse ->
                     TaskResponseDto.fromTaskResponse(taskResponse)
+                },
+                { error ->
+                    throw ApplicationException(error)
+                },
+            )
+
+    @Operation(
+        summary = "Get all tasks",
+        description = "Retrieves a paginated list of tasks.",
+        responses = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Tasks retrieved successfully",
+                content = [Content(schema = Schema(implementation = TasksCatalogueDto::class))],
+            ),
+            ApiResponse(responseCode = "401", description = "You are not authenticated"),
+        ],
+    )
+    @GetMapping
+    fun getTasks(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): TasksCatalogueDto =
+        getTasksUseCase
+            .execute(page, size)
+            .fold(
+                { tasksPageResponse ->
+                    TasksCatalogueDto.fromResponse(tasksPageResponse)
                 },
                 { error ->
                     throw ApplicationException(error)

@@ -15,6 +15,21 @@ sealed class UseCaseError {
         override val code = "TASK_NOT_FOUND"
         override val message = "The task was not found."
     }
+
+    data object PageNumberNegative : UseCaseError() {
+        override val code = "PAGE_NUMBER_NEGATIVE"
+        override val message = "The page number must not be negative."
+    }
+
+    data object PageSizeNegative : UseCaseError() {
+        override val code = "PAGE_SIZE_NEGATIVE"
+        override val message = "The page size must not be negative."
+    }
+
+    data object PageSizeTooLarge : UseCaseError() {
+        override val code = "PAGE_SIZE_TOO_LARGE"
+        override val message = "The page size must not exceed 100."
+    }
 }
 
 fun DomainError.toUseCaseError(): UseCaseError =
