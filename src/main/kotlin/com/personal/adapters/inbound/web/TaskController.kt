@@ -8,6 +8,7 @@ import com.personal.adapters.inbound.web.dto.TaskResponseDto
 import com.personal.adapters.inbound.web.errormanager.ApplicationException
 import com.personal.usecase.ports.inbound.CreateMultipleTasksUseCase
 import com.personal.usecase.ports.inbound.CreateTaskUseCase
+import com.personal.usecase.ports.inbound.GetTaskByIdUseCase
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
+import java.util.*
 
 @Tag(name = "Task", description = "Task Management API")
 @RestController
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.*
 class TaskController(
     private val createTaskUseCase: CreateTaskUseCase,
     private val createMultipleTasksUseCase: CreateMultipleTasksUseCase,
+    private val getTaskByIdUseCase: GetTaskByIdUseCase,
 ) {
     @Operation(
         summary = "Create a new task",
@@ -81,4 +84,31 @@ class TaskController(
                 },
             )
 
+    @Operation(
+        summary = "Get a task by ID",
+        description = "Retrieves a single task by its unique identifier.",
+        responses = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Task retrieved successfully",
+                content = [Content(schema = Schema(implementation = TaskResponseDto::class))],
+            ),
+            ApiResponse(responseCode = "404", description = "Task not found"),
+            ApiResponse(responseCode = "401", description = "You are not authenticated"),
+        ],
+    )
+    @GetMapping("/{id}")
+    fun getTaskById(
+        @PathVariable id: UUID,
+    ): TaskResponseDto =
+        getTaskByIdUseCase
+            .execute(id)
+            .fold(
+                { taskResponse ->
+                    TaskResponseDto.fromTaskResponse(taskResponse)
+                },
+                { error ->
+                    throw ApplicationException(error)
+                },
+            )
 }
