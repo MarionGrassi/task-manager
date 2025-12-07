@@ -74,13 +74,7 @@ mvn clean install
 
 ### 3. Run the Application
 
-Using Maven wrapper:
-
-```bash
-./mvnw spring-boot:run
-```
-
-Or using system Maven:
+Using system Maven:
 
 ```bash
 mvn spring-boot:run
