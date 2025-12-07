@@ -17,7 +17,6 @@ import com.personal.domain.model.TaskId
 import com.personal.usecase.commands.UpdateTaskStatusCommand
 import com.personal.usecase.errors.UseCaseError
 import com.personal.usecase.ports.outbound.TaskRepositoryPort
-import io.mockk.MockKMatcherScope
 import java.util.UUID
 
 @DisplayName("UpdateTaskStatusApplicationService.execute(...)")
@@ -58,7 +57,7 @@ class UpdateTaskStatusApplicationServiceTest {
         )
 
       every { taskRepository.findById(taskId) } returns incompleteTask
-      every { taskRepository.save(any()) } returns completedTask
+      every { taskRepository.updateTask(any()) } returns completedTask
 
       // When
       val result = service.execute(command)
@@ -76,7 +75,7 @@ class UpdateTaskStatusApplicationServiceTest {
       )
 
         verify(exactly = 1) { taskRepository.findById(taskId) }
-        verify(exactly = 1) { taskRepository.save(any()) }
+        verify(exactly = 1) { taskRepository.updateTask(any()) }
     }
 
     @Test
@@ -103,7 +102,7 @@ class UpdateTaskStatusApplicationServiceTest {
         )
 
       every { taskRepository.findById(taskId) } returns alreadyCompletedTask
-      every { taskRepository.save(any()) } returns updatedTask
+      every { taskRepository.updateTask(any()) } returns updatedTask
 
       // When
       val result = service.execute(command)
@@ -120,7 +119,7 @@ class UpdateTaskStatusApplicationServiceTest {
       )
 
         verify(exactly = 1) { taskRepository.findById(taskId) }
-        verify(exactly = 1) { taskRepository.save(any()) }
+        verify(exactly = 1) { taskRepository.updateTask(any()) }
     }
   }
 
@@ -151,7 +150,7 @@ class UpdateTaskStatusApplicationServiceTest {
         )
 
       every { taskRepository.findById(taskId) } returns completedTask
-      every { taskRepository.save(any()) } returns incompleteTask
+      every { taskRepository.updateTask(any()) } returns incompleteTask
 
       // When
       val result = service.execute(command)
@@ -169,7 +168,7 @@ class UpdateTaskStatusApplicationServiceTest {
       )
 
         verify(exactly = 1) { taskRepository.findById(taskId) }
-        verify(exactly = 1) { taskRepository.save(any()) }
+        verify(exactly = 1) { taskRepository.updateTask(any()) }
     }
 
     @Test
@@ -196,7 +195,7 @@ class UpdateTaskStatusApplicationServiceTest {
         )
 
       every { taskRepository.findById(taskId) } returns incompleteTask
-      every { taskRepository.save(any()) } returns updatedTask
+      every { taskRepository.updateTask(any()) } returns updatedTask
 
       // When
       val result = service.execute(command)
@@ -213,7 +212,7 @@ class UpdateTaskStatusApplicationServiceTest {
       )
 
         verify(exactly = 1) { taskRepository.findById(taskId) }
-        verify(exactly = 1) { taskRepository.save(any()) }
+        verify(exactly = 1) { taskRepository.updateTask(any()) }
     }
   }
 
@@ -250,7 +249,51 @@ class UpdateTaskStatusApplicationServiceTest {
       )
 
         verify(exactly = 1) { taskRepository.findById(taskId) }
-        verify(exactly = 0) { taskRepository.save(any()) }
+        verify(exactly = 0) { taskRepository.updateTask(any()) }
+    }
+  }
+
+  @Nested
+  @DisplayName("when task update fails")
+  inner class TaskUpdateFailed {
+    @Test
+    @DisplayName("should return Err(UseCaseError.TaskUpdateFailed) when updateTask returns null")
+    fun `should return error when update fails`() {
+      // Given
+      val taskUuid = UUID.randomUUID()
+      val taskId = TaskId.fromUUID(taskUuid)
+      val existingTask =
+        Task
+          .create(
+            taskId = taskId,
+            label = "Test Task",
+            description = "Test Description",
+            completed = false,
+          ).getOrElse { error("Should not fail") }
+
+      val command =
+        UpdateTaskStatusCommand(
+          taskId = taskUuid,
+          completed = true,
+        )
+
+      every { taskRepository.findById(taskId) } returns existingTask
+      every { taskRepository.updateTask(any()) } returns null
+
+      // When
+      val result = service.execute(command)
+
+      // Then
+      assertTrue(result.isErr)
+      result.fold(
+        { _ -> fail("Expected Err, but got Ok") },
+        { error ->
+          assertEquals(UseCaseError.TaskUpdateFailed, error)
+        },
+      )
+
+        verify(exactly = 1) { taskRepository.findById(taskId) }
+        verify(exactly = 1) { taskRepository.updateTask(any()) }
     }
   }
 }
