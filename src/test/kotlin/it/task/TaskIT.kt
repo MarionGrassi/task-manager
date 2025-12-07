@@ -1,4 +1,4 @@
-package it.system.task
+package it.task
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.personal.adapters.inbound.web.dto.TaskResponseDto
@@ -9,6 +9,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
@@ -34,6 +35,7 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Successfully creates a task with valid data")
         fun `creates task successfully`() {
+            val token = obtainAccessToken()
             val requestBody =
                 """
         {
@@ -46,6 +48,7 @@ class TaskIT : IntegrationTestBase() {
             mockMvc
                 .perform(
                     post(BASE_TASK_URL)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody),
                 ).andDo(MockMvcResultHandlers.print())
@@ -60,6 +63,7 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Creates a task with completed status true")
         fun `creates completed task`() {
+            val token = obtainAccessToken()
             val requestBody =
                 """
         {
@@ -72,11 +76,34 @@ class TaskIT : IntegrationTestBase() {
             mockMvc
                 .perform(
                     post(BASE_TASK_URL)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody),
                 ).andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isCreated)
                 .andExpect(jsonPath("$.completed").value(true))
+        }
+
+        @Test
+        @DisplayName("Returns 401 when invalid authentication token provided")
+        fun `returns 401 with invalid token`() {
+            val requestBody =
+                """
+        {
+          "label": "Complete project",
+          "description": "Finish the API implementation",
+          "completed": false
+        }
+        """.trimIndent()
+
+            mockMvc
+                .perform(
+                    post(BASE_TASK_URL)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isUnauthorized)
         }
     }
 
@@ -86,6 +113,7 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Successfully creates multiple tasks")
         fun `creates multiple tasks successfully`() {
+            val token = obtainAccessToken()
             val requestBody =
                 """
         {
@@ -112,6 +140,7 @@ class TaskIT : IntegrationTestBase() {
             mockMvc
                 .perform(
                     post("$BASE_TASK_URL/bulk")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody),
                 ).andDo(MockMvcResultHandlers.print())
@@ -130,11 +159,13 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Successfully retrieves a task by ID")
         fun `retrieves task by id successfully`() {
+            val token = obtainAccessToken()
             val taskId = createTask("Retrieve me", "Task to retrieve", false)
 
             mockMvc
                 .perform(
                     get("$BASE_TASK_URL/{id}", taskId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .accept(MediaType.APPLICATION_JSON),
                 ).andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk)
@@ -148,14 +179,29 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Returns 404 when task not found")
         fun `returns 404 for non-existent task`() {
+            val token = obtainAccessToken()
             val nonExistentId = UUID.randomUUID()
 
             mockMvc
                 .perform(
                     get("$BASE_TASK_URL/{id}", nonExistentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .accept(MediaType.APPLICATION_JSON),
                 ).andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isNotFound)
+        }
+
+        @Test
+        @DisplayName("Returns 401 when no authentication token provided")
+        fun `returns 401 without token`() {
+            val taskId = createTask("Retrieve me", "Task to retrieve", false)
+
+            mockMvc
+                .perform(
+                    get("$BASE_TASK_URL/{id}", taskId)
+                        .accept(MediaType.APPLICATION_JSON),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isUnauthorized)
         }
     }
 
@@ -165,6 +211,7 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Successfully retrieves paginated tasks")
         fun `retrieves paginated tasks successfully`() {
+            val token = obtainAccessToken()
             // Create some tasks first
             createTask("Task A", "Description A", false)
             createTask("Task B", "Description B", true)
@@ -173,6 +220,7 @@ class TaskIT : IntegrationTestBase() {
             mockMvc
                 .perform(
                     get(BASE_TASK_URL)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .accept(MediaType.APPLICATION_JSON),
                 ).andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk)
@@ -187,9 +235,11 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Retrieves tasks with custom pagination")
         fun `retrieves tasks with custom page size`() {
+            val token = obtainAccessToken()
             mockMvc
                 .perform(
                     get(BASE_TASK_URL)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .param("page", "0")
                         .param("size", "5")
                         .accept(MediaType.APPLICATION_JSON),
@@ -201,9 +251,11 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Retrieves tasks with negative page")
         fun `retrieves tasks with negative page`() {
+            val token = obtainAccessToken()
             mockMvc
                 .perform(
                     get(BASE_TASK_URL)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .param("page", "-1")
                         .param("size", "5")
                         .accept(MediaType.APPLICATION_JSON),
@@ -215,9 +267,11 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Retrieves tasks with negative size")
         fun `retrieves tasks with negative size`() {
+            val token = obtainAccessToken()
             mockMvc
                 .perform(
                     get(BASE_TASK_URL)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .param("page", "0")
                         .param("size", "-5")
                         .accept(MediaType.APPLICATION_JSON),
@@ -229,15 +283,28 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Retrieves tasks with too large size")
         fun `retrieves tasks with too large size`() {
+            val token = obtainAccessToken()
             mockMvc
                 .perform(
                     get(BASE_TASK_URL)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .param("page", "0")
                         .param("size", "102")
                         .accept(MediaType.APPLICATION_JSON),
                 ).andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isBadRequest)
                 .andExpect(jsonPath("$.code").value("PAGE_SIZE_TOO_LARGE"))
+        }
+
+        @Test
+        @DisplayName("Returns 401 when no authentication token provided")
+        fun `returns 401 without token`() {
+            mockMvc
+                .perform(
+                    get(BASE_TASK_URL)
+                        .accept(MediaType.APPLICATION_JSON),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isUnauthorized)
         }
     }
 
@@ -247,6 +314,7 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Successfully updates task status to completed")
         fun `updates task status to completed`() {
+            val token = obtainAccessToken()
             val taskId = createTask("Task to complete", "This will be marked as done", false)
 
             val requestBody =
@@ -259,6 +327,7 @@ class TaskIT : IntegrationTestBase() {
             mockMvc
                 .perform(
                     patch("$BASE_TASK_URL/{id}/status", taskId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody),
                 ).andDo(MockMvcResultHandlers.print())
@@ -271,6 +340,7 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Successfully updates task status to incomplete")
         fun `updates task status to incomplete`() {
+            val token = obtainAccessToken()
             val taskId = createTask("Completed task", "This will be marked as incomplete", true)
 
             val requestBody =
@@ -283,6 +353,7 @@ class TaskIT : IntegrationTestBase() {
             mockMvc
                 .perform(
                     patch("$BASE_TASK_URL/{id}/status", taskId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody),
                 ).andDo(MockMvcResultHandlers.print())
@@ -294,6 +365,7 @@ class TaskIT : IntegrationTestBase() {
         @Test
         @DisplayName("Returns 404 when updating non-existent task")
         fun `returns 404 for non-existent task`() {
+            val token = obtainAccessToken()
             val nonExistentId = UUID.randomUUID()
 
             val requestBody =
@@ -306,10 +378,33 @@ class TaskIT : IntegrationTestBase() {
             mockMvc
                 .perform(
                     patch("$BASE_TASK_URL/{id}/status", nonExistentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody),
                 ).andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isNotFound)
+        }
+
+        @Test
+        @DisplayName("Returns 401 when invalid authentication token provided")
+        fun `returns 401 with invalid token`() {
+            val taskId = createTask("Task to complete", "This will be marked as done", false)
+
+            val requestBody =
+                """
+                    {
+                      "completed": true
+                    }
+                """.trimIndent()
+
+            mockMvc
+                .perform(
+                    patch("$BASE_TASK_URL/{id}/status", taskId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody),
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isUnauthorized)
         }
     }
 
@@ -319,6 +414,7 @@ class TaskIT : IntegrationTestBase() {
         description: String,
         completed: Boolean,
     ): UUID {
+        val token = obtainAccessToken()
         val requestBody =
             """
       {
@@ -332,6 +428,7 @@ class TaskIT : IntegrationTestBase() {
             mockMvc
                 .perform(
                     post(BASE_TASK_URL)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody),
                 ).andExpect(status().isCreated)
