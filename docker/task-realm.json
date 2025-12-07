@@ -1,0 +1,72 @@
+{
+  "realm": "task",
+  "enabled": true,
+  "roles": {
+    "realm": []
+  },
+  "clients": [
+    {
+      "clientId": "client-1",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "client-2",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "service-account-client-1",
+      "enabled": true,
+      "serviceAccountClientId": "client-1",
+      "realmRoles": []
+    },
+    {
+      "username": "service-account-client-2",
+      "enabled": true,
+      "serviceAccountClientId": "client-2",
+      "realmRoles": []
+    }
+  ]
+}

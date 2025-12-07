@@ -6,7 +6,17 @@ spring:
     mongodb:
       uri: mongodb://localhost:27017/appdb
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${keycloak.url}/realms/${keycloak.realm}
+
 server:
   port: 8080
   servlet:
     context-path: /api
+
+keycloak:
+  url: http://localhost:9999
+  realm: task

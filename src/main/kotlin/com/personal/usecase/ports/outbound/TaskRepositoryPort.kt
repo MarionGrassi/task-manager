@@ -15,4 +15,6 @@ interface TaskRepositoryPort {
         page: Int,
         size: Int,
     ): TasksPage
+
+    fun updateTask(task: Task): Task?
 }

@@ -6,9 +6,11 @@ import com.personal.domain.model.TaskId
 import com.personal.domain.model.TasksPage
 import com.personal.usecase.ports.outbound.TaskRepositoryPort
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
+import org.springframework.data.mongodb.core.query.Update
 import org.springframework.stereotype.Component
 
 @Component
@@ -46,5 +48,22 @@ class TaskRepositoryAdapter(
             size = size,
             totalCount = totalElements,
         )
+    }
+
+    override fun updateTask(task: Task): Task? {
+        val query =
+            Query(
+                Criteria
+                    .where("taskId")
+                    .`is`(task.taskId.uuid.toString())
+            )
+
+        val update = Update()
+        update["completed"] = task.completed
+
+        val options = FindAndModifyOptions.options().returnNew(true)
+        val updated = mongoTemplate.findAndModify(query, update, options, TaskEntity::class.java)
+
+        return updated?.toDomain()
     }
 }

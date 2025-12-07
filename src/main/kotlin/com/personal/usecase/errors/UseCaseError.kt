@@ -16,6 +16,11 @@ sealed class UseCaseError {
         override val message = "The task was not found."
     }
 
+    data object TaskUpdateFailed : UseCaseError() {
+        override val code = "TASK_UPDATE_FAILED"
+        override val message = "The task could not be updated."
+    }
+
     data object PageNumberNegative : UseCaseError() {
         override val code = "PAGE_NUMBER_NEGATIVE"
         override val message = "The page number must not be negative."
